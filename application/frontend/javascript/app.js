@@ -1,18 +1,33 @@
 (function() {
-  angular.module('v.controllers', ['v.controllers.navigation', 'v.controllers.index', 'v.controllers.login', 'v.controllers.settings', 'v.controllers.logs']);
+  angular.module('v.controllers.applications', []).controller('ApplicationController', [
+    '$scope', 'application', function($scope, application) {
+      $scope.$applications.current = application;
+      if ($scope.$state.current.name === 'v.application') {
+        return $scope.$state.go('v.application.logs', {
+          applicationId: application.id
+        });
+      }
+    }
+  ]);
+
+}).call(this);
+
+(function() {
+  angular.module('v.controllers', ['v.controllers.navigation', 'v.controllers.index', 'v.controllers.login', 'v.controllers.settings', 'v.controllers.applications', 'v.controllers.logs']);
 
 }).call(this);
 
 (function() {
   angular.module('v.controllers.index', []).controller('IndexController', [
-    '$scope', '$injector', function($scope, $injector) {
-      var $state, $v;
-      $v = $injector.get('$v');
-      $state = $injector.get('$state');
-      if ($v.user.isLogin) {
-        return $state.go('v.log-default');
+    '$scope', function($scope) {
+      if ($scope.$user.isLogin) {
+        if ($scope.$state.current.name === 'v.index' && $scope.$applications.items.length) {
+          return $scope.$state.go('v.application.logs', {
+            applicationId: $scope.$applications.items[0].id
+          });
+        }
       } else {
-        return $state.go('v.login');
+        return $scope.$state.go('v.login');
       }
     }
   ]);
@@ -32,37 +47,27 @@
 
 (function() {
   angular.module('v.controllers.logs', []).controller('LogsController', [
-    '$scope', '$injector', 'applications', 'logs', function($scope, $injector, applications, logs) {
-      var $state, $stateParams;
-      $state = $injector.get('$state');
-      $stateParams = $injector.get('$stateParams');
-      $scope.applications = applications;
+    '$scope', 'logs', function($scope, logs) {
       $scope.logs = logs;
-      $scope.currentApplication = logs.application;
-      $scope.keyword = $stateParams.keyword;
+      $scope.keyword = $scope.$stateParams.keyword;
       $scope.search = function($event, keyword) {
         $event.preventDefault();
-        return $state.go('v.log-list', {
-          applicationId: $scope.currentApplication.id,
+        return $scope.$state.go($scope.$state.current.name, {
+          applicationId: $scope.$applications.current.id,
           keyword: keyword
-        }, {
-          reload: true
         });
       };
       return $scope.showDetail = function(logId) {
-        return $state.go('v.log-detail', {
-          applicationId: $scope.currentApplication.id,
+        return $scope.$state.go('v.application.log', {
+          applicationId: $scope.$applications.current.id,
           logId: logId
-        }, {
-          reload: true
         });
       };
     }
   ]).controller('LogController', [
-    '$scope', '$injector', 'application', 'log', function($scope, $injector, application, log) {
+    '$scope', '$injector', 'log', function($scope, $injector, log) {
       var $v;
       $v = $injector.get('$v');
-      $scope.application = application;
       $scope.log = log;
       $scope.jsonStringify = function(json) {
         if (typeof json === 'object') {
@@ -103,10 +108,8 @@
   var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   angular.module('v.controllers.settings', []).controller('SettingsController', [
-    '$scope', '$injector', function($scope, $injector) {
-      var $state;
-      $state = $injector.get('$state');
-      return $state.go('v.settings-applications');
+    '$scope', function($scope) {
+      return $scope.$state.go('v.settings-applications');
     }
   ]).controller('SettingsProfileController', [
     '$scope', '$injector', 'profile', function($scope, $injector, profile) {
@@ -131,10 +134,8 @@
     }
   ]).controller('SettingsApplicationsController', [
     '$scope', '$injector', 'applications', function($scope, $injector, applications) {
-      var $state, $stateParams, $v, $validator, application, _i, _len, _ref, _ref1;
+      var $v, $validator, application, _i, _len, _ref, _ref1;
       $v = $injector.get('$v');
-      $state = $injector.get('$state');
-      $stateParams = $injector.get('$stateParams');
       $validator = $injector.get('$validator');
       $scope.applications = applications;
       _ref = $scope.applications;
@@ -150,7 +151,7 @@
           }
           NProgress.start();
           return $v.api.application.removeApplication(application.id).success(function() {
-            return $state.go($state.current, $stateParams, {
+            return $scope.$state.go($scope.$state.current, $scope.$stateParams, {
               reload: true
             });
           });
@@ -159,10 +160,9 @@
     }
   ]).controller('SettingsNewApplicationController', [
     '$scope', '$injector', function($scope, $injector) {
-      var $state, $v, $validator;
+      var $v, $validator;
       $v = $injector.get('$v');
       $validator = $injector.get('$validator');
-      $state = $injector.get('$state');
       $scope.mode = 'new';
       $scope.application = {
         title: '',
@@ -174,7 +174,7 @@
         autoShow: true,
         hide: function() {},
         hiddenCallback: function() {
-          return $state.go('v.settings-applications', null, {
+          return $scope.$state.go('v.settings-applications', null, {
             reload: true
           });
         }
@@ -190,10 +190,9 @@
     }
   ]).controller('SettingsApplicationController', [
     '$scope', '$injector', 'application', function($scope, $injector, application) {
-      var $state, $timeout, $v, $validator, member, _i, _len, _ref, _ref1, _ref2;
+      var $timeout, $v, $validator, member, _i, _len, _ref, _ref1, _ref2;
       $v = $injector.get('$v');
       $validator = $injector.get('$validator');
-      $state = $injector.get('$state');
       $timeout = $injector.get('$timeout');
       $scope.mode = 'edit';
       $scope.application = application;
@@ -219,7 +218,7 @@
         autoShow: true,
         hide: function() {},
         hiddenCallback: function() {
-          return $state.go('v.settings-applications', null, {
+          return $scope.$state.go('v.settings-applications', null, {
             reload: true
           });
         }
@@ -299,10 +298,8 @@
     }
   ]).controller('SettingsUsersController', [
     '$scope', '$injector', 'users', function($scope, $injector, users) {
-      var $state, $stateParams, $v, $validator;
+      var $v, $validator;
       $v = $injector.get('$v');
-      $state = $injector.get('$state');
-      $stateParams = $injector.get('$stateParams');
       $validator = $injector.get('$validator');
       $scope.users = users;
       $scope.currentUser = $v.user;
@@ -314,7 +311,7 @@
           }
           NProgress.start();
           return $v.api.user.removeUser(user.id).success(function() {
-            return $state.go($state.current, $stateParams, {
+            return $scope.$state.go($scope.$state.current, $scope.$stateParams, {
               reload: true
             });
           });
@@ -323,10 +320,9 @@
     }
   ]).controller('SettingsNewUserController', [
     '$scope', '$injector', function($scope, $injector) {
-      var $state, $v, $validator;
+      var $v, $validator;
       $v = $injector.get('$v');
       $validator = $injector.get('$validator');
-      $state = $injector.get('$state');
       $scope.mode = 'new';
       $scope.user = {
         email: ''
@@ -335,7 +331,7 @@
         autoShow: true,
         hide: function() {},
         hiddenCallback: function() {
-          return $state.go('v.settings-users', null, {
+          return $scope.$state.go('v.settings-users', null, {
             reload: true
           });
         }
@@ -351,17 +347,16 @@
     }
   ]).controller('SettingsUserController', [
     '$scope', '$injector', 'user', function($scope, $injector, user) {
-      var $state, $v, $validator;
+      var $v, $validator;
       $v = $injector.get('$v');
       $validator = $injector.get('$validator');
-      $state = $injector.get('$state');
       $scope.mode = 'edit';
       $scope.user = user;
       $scope.modal = {
         autoShow: true,
         hide: function() {},
         hiddenCallback: function() {
-          return $state.go('v.settings-users', null, {
+          return $scope.$state.go('v.settings-users', null, {
             reload: true
           });
         }
@@ -818,12 +813,25 @@
       $urlRouterProvider.otherwise('/');
       $stateProvider.state('v', {
         url: '',
+        resolve: {
+          applications: [
+            '$v', '$rootScope', function($v, $rootScope) {
+              if (!$v.user.isLogin) {
+                return null;
+              }
+              return $v.api.application.getApplications(0, true).then(function(response) {
+                return $rootScope.$applications = response.data;
+              });
+            }
+          ]
+        },
         templateUrl: '/views/shared/layout.html'
       });
       $stateProvider.state('v.index', {
         url: '/',
         views: {
           content: {
+            templateUrl: '/views/index.html',
             controller: 'IndexController'
           }
         }
@@ -842,22 +850,15 @@
           }
         }
       });
-      $stateProvider.state('v.log-default', {
-        url: '/applications',
+      $stateProvider.state('v.application', {
+        url: '/applications/:applicationId',
         resolve: {
           title: function() {
-            return 'Logs - ';
+            return 'Application - ';
           },
-          applications: [
-            '$v', function($v) {
-              return $v.api.application.getApplications(0, true).then(function(response) {
-                return response.data;
-              });
-            }
-          ],
-          logs: [
-            '$v', function($v) {
-              return $v.api.log.getLogs().then(function(response) {
+          application: [
+            '$v', '$stateParams', function($v, $stateParams) {
+              return $v.api.application.getApplication($stateParams.applicationId).then(function(response) {
                 return response.data;
               });
             }
@@ -865,24 +866,17 @@
         },
         views: {
           content: {
-            templateUrl: '/views/log/list.html',
-            controller: 'LogsController'
+            template: "<div ui-view></div>",
+            controller: 'ApplicationController'
           }
         }
       });
-      $stateProvider.state('v.log-list', {
-        url: '/applications/:applicationId/logs?index?keyword',
+      $stateProvider.state('v.application.logs', {
+        url: '/logs?index?keyword',
         resolve: {
           title: function() {
             return 'Logs - ';
           },
-          applications: [
-            '$v', function($v) {
-              return $v.api.application.getApplications(0, true).then(function(response) {
-                return response.data;
-              });
-            }
-          ],
           logs: [
             '$v', '$stateParams', function($v, $stateParams) {
               return $v.api.log.getLogs($stateParams.applicationId, $stateParams.index, $stateParams.keyword).then(function(response) {
@@ -891,26 +885,15 @@
             }
           ]
         },
-        views: {
-          content: {
-            templateUrl: '/views/log/list.html',
-            controller: 'LogsController'
-          }
-        }
+        templateUrl: '/views/log/list.html',
+        controller: 'LogsController'
       });
-      $stateProvider.state('v.log-detail', {
-        url: '/applications/:applicationId/logs/:logId',
+      $stateProvider.state('v.application.log', {
+        url: '/logs/:logId',
         resolve: {
           title: function() {
             return 'Log - ';
           },
-          application: [
-            '$v', '$stateParams', function($v, $stateParams) {
-              return $v.api.application.getApplication($stateParams.applicationId).then(function(response) {
-                return response.data;
-              });
-            }
-          ],
           log: [
             '$v', '$stateParams', function($v, $stateParams) {
               return $v.api.log.getLog($stateParams.applicationId, $stateParams.logId).then(function(response) {
@@ -919,12 +902,8 @@
             }
           ]
         },
-        views: {
-          content: {
-            templateUrl: '/views/log/detail.html',
-            controller: 'LogController'
-          }
-        }
+        templateUrl: '/views/log/detail.html',
+        controller: 'LogController'
       });
       $stateProvider.state('v.settings', {
         url: '/settings',

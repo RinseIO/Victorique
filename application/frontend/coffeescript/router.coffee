@@ -17,6 +17,12 @@ angular.module 'v.router', [
     # ---------------------------------------------------------
     $stateProvider.state 'v',
         url: ''
+        resolve:
+            applications: ['$v', '$rootScope', ($v, $rootScope) ->
+                return null if not $v.user.isLogin
+                $v.api.application.getApplications(0, yes).then (response) ->
+                    $rootScope.$applications = response.data
+            ]
         templateUrl: '/views/shared/layout.html'
 
     # ---------------------------------------------------------
@@ -26,6 +32,7 @@ angular.module 'v.router', [
         url: '/'
         views:
             content:
+                templateUrl: '/views/index.html'
                 controller: 'IndexController'
 
     # ---------------------------------------------------------
@@ -41,62 +48,46 @@ angular.module 'v.router', [
                 controller: 'LoginController'
 
     # ---------------------------------------------------------
-    # /applications
+    # /applications/:applicationId
     # ---------------------------------------------------------
-    $stateProvider.state 'v.log-default',
-        url: '/applications'
+    $stateProvider.state 'v.application',
+        url: '/applications/:applicationId'
         resolve:
-            title: -> 'Logs - '
-            applications: ['$v', ($v) ->
-                $v.api.application.getApplications(0, yes).then (response) ->
-                    response.data
-            ]
-            logs: ['$v', ($v) ->
-                $v.api.log.getLogs().then (response) ->
-                    response.data
-            ]
-        views:
-            content:
-                templateUrl: '/views/log/list.html'
-                controller: 'LogsController'
-    # ---------------------------------------------------------
-    # /applications/:applicationId/logs
-    # ---------------------------------------------------------
-    $stateProvider.state 'v.log-list',
-        url: '/applications/:applicationId/logs?index?keyword'
-        resolve:
-            title: -> 'Logs - '
-            applications: ['$v', ($v) ->
-                $v.api.application.getApplications(0, yes).then (response) ->
-                    response.data
-            ]
-            logs: ['$v', '$stateParams', ($v, $stateParams) ->
-                $v.api.log.getLogs($stateParams.applicationId, $stateParams.index, $stateParams.keyword).then (response) ->
-                    response.data
-            ]
-        views:
-            content:
-                templateUrl: '/views/log/list.html'
-                controller: 'LogsController'
-    # ---------------------------------------------------------
-    # /applications/:applicationId/logs/:logId
-    # ---------------------------------------------------------
-    $stateProvider.state 'v.log-detail',
-        url: '/applications/:applicationId/logs/:logId'
-        resolve:
-            title: -> 'Log - '
+            title: -> 'Application - '
             application: ['$v', '$stateParams', ($v, $stateParams) ->
                 $v.api.application.getApplication($stateParams.applicationId).then (response) ->
                     response.data
             ]
+        views:
+            content:
+                template: "<div ui-view></div>"
+                controller: 'ApplicationController'
+    # ---------------------------------------------------------
+    # /applications/:applicationId/logs
+    # ---------------------------------------------------------
+    $stateProvider.state 'v.application.logs',
+        url: '/logs?index?keyword'
+        resolve:
+            title: -> 'Logs - '
+            logs: ['$v', '$stateParams', ($v, $stateParams) ->
+                $v.api.log.getLogs($stateParams.applicationId, $stateParams.index, $stateParams.keyword).then (response) ->
+                    response.data
+            ]
+        templateUrl: '/views/log/list.html'
+        controller: 'LogsController'
+    # ---------------------------------------------------------
+    # /applications/:applicationId/logs/:logId
+    # ---------------------------------------------------------
+    $stateProvider.state 'v.application.log',
+        url: '/logs/:logId'
+        resolve:
+            title: -> 'Log - '
             log: ['$v', '$stateParams', ($v, $stateParams) ->
                 $v.api.log.getLog($stateParams.applicationId, $stateParams.logId).then (response) ->
                     response.data
             ]
-        views:
-            content:
-                templateUrl: '/views/log/detail.html'
-                controller: 'LogController'
+        templateUrl: '/views/log/detail.html'
+        controller: 'LogController'
 
     # ---------------------------------------------------------
     # /settings
