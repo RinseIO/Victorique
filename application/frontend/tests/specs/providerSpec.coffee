@@ -2,6 +2,11 @@ describe 'v.provider', ->
     fakeModule = null
     vProvider = null
 
+    mackUiRouter = ($httpBackend) ->
+        $httpBackend.whenGET('/views/shared/layout.html').respond ''
+        $httpBackend.whenGET('/views/login.html').respond ''
+        $httpBackend.whenGET('/views/index.html').respond ''
+
     beforeEach module('v')
     beforeEach ->
         # mock NProgress
@@ -18,8 +23,21 @@ describe 'v.provider', ->
         beforeEach ->
             window.user =
                 id: 100
+                permission: 1
         it '$v.user.isLogin will be yes when $v.user.id is not null', inject ($v) ->
             expect($v.user.isLogin).toBeTruthy()
+        it '$rootScope.$user is $v.user', inject ($v, $rootScope) ->
+            expect($rootScope.$user).toBe $v.user
+        describe '$v.user.isRoot is yes when the permission is 1', ->
+            beforeEach ->
+                window.user.permission = 1
+            it '$v.user.isRoot is yes when permission is 1', inject ($v) ->
+                expect($v.user.isRoot).toBeTruthy()
+        describe '$v.user.isRoot is no when the permission is 0', ->
+            beforeEach ->
+                window.user.permission = 0
+            it '$v.user.isRoot is yes when permission is 1', inject ($v) ->
+                expect($v.user.isRoot).toBeFalsy()
     describe '$v.user not login', ->
         beforeEach ->
             window.user = {}
@@ -48,13 +66,17 @@ describe 'v.provider', ->
                 title: 'Success'
                 message: 'message'
                 expire: 3000
+        it '$v.alert.confirm() will set $rootScope.$confirmModal', inject ($v, $rootScope) ->
+            $v.alert.confirm 'message', 'callback'
+            expect($rootScope.$confirmModal.message).toEqual 'message'
+            expect($rootScope.$confirmModal.callback).toEqual 'callback'
+            expect($rootScope.$confirmModal.isShow).toBeTruthy()
 
     describe 'vProvider.http', ->
-        it 'vProvider.http is $http', inject ($httpBackend) ->
-            $httpBackend.whenGET('/views/shared/layout.html').respond '' # ui-router
-            $httpBackend.whenGET('/views/login.html').respond '' # ui-router
-            $httpBackend.whenGET('/views/index.html').respond '' # ui-router
+        beforeEach inject ($httpBackend) ->
+            mackUiRouter $httpBackend
             $httpBackend.whenGET('/').respond 'result'
+        it 'vProvider.http is $http', inject ($httpBackend) ->
             successSpy = jasmine.createSpy 'success'
             vProvider.http
                 method: 'get'
@@ -63,6 +85,24 @@ describe 'v.provider', ->
                 successSpy()
                 expect(result).toEqual 'result'
             $httpBackend.flush()
+            expect(successSpy).toHaveBeenCalled()
+
+    describe '$rootScope.$loadings', ->
+        beforeEach inject ($httpBackend) ->
+            mackUiRouter $httpBackend
+            $httpBackend.whenGET('/').respond 'result'
+        it '$rootScope.$loadings.hasAny() will return yes when vProvider.http is progress', inject ($httpBackend, $rootScope) ->
+            expect($rootScope.$loadings.hasAny()).toBeFalsy()
+            successSpy = jasmine.createSpy 'success'
+            vProvider.http
+                method: 'get'
+                url: '/'
+            .success (result) ->
+                successSpy()
+                expect(result).toEqual 'result'
+            expect($rootScope.$loadings.hasAny()).toBeTruthy()
+            $httpBackend.flush()
+            expect($rootScope.$loadings.hasAny()).toBeFalsy()
             expect(successSpy).toHaveBeenCalled()
 
     describe '$v.api.settings', ->

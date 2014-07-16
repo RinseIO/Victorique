@@ -49,7 +49,7 @@ angular.module 'v.directive', []
                     scope.$eval scope.modal.hiddenCallback,
                         $event: e
         $(element).on 'shown.bs.modal', ->
-            # focus the firest element
+            # focus the first element
             $firstController = $(element).find('form .form-control:first')
             if $firstController.length
                 $firstController.select()
@@ -128,7 +128,7 @@ angular.module 'v.directive', []
 
         for index in [(scope.pageList.index - 3)..(scope.pageList.index + 3)] by 1
             scope.links.numbers.push
-                show: index >= 0 and index <= scope.pageList.max_index
+                show: 0 <= index <= scope.pageList.max_index
                 isCurrent: index is scope.pageList.index
                 pageNumber: index + 1
                 url: scope.urlTemplate.replace '#{index}', index

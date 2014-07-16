@@ -80,7 +80,7 @@
       return $scope.closeLog = function($event) {
         $event.preventDefault();
         NProgress.start();
-        return $v.api.log.updateLog(application.id, {
+        return $v.api.log.updateLog($scope.$applications.current.id, {
           id: log.id,
           is_close: true
         }).success(function(result) {
@@ -124,8 +124,9 @@
             NProgress.start();
             return $v.api.settings.updateProfile({
               name: $scope.profile.model.name
-            }).success(function() {
+            }).success(function(user) {
               NProgress.done();
+              $v.user.name = user.name;
               return $v.alert.saved();
             });
           });
@@ -514,7 +515,7 @@
         _results = [];
         for (index = _i = _ref = scope.pageList.index - 3, _ref1 = scope.pageList.index + 3; _i <= _ref1; index = _i += 1) {
           _results.push(scope.links.numbers.push({
-            show: index >= 0 && index <= scope.pageList.max_index,
+            show: (0 <= index && index <= scope.pageList.max_index),
             isCurrent: index === scope.pageList.index,
             pageNumber: index + 1,
             url: scope.urlTemplate.replace('#{index}', index)
@@ -562,7 +563,18 @@
         $http = $injector.get('$http');
         $rootScope = $injector.get('$rootScope');
         $rootScope.$confirmModal = {};
-        return $rootScope.$user = _this.user;
+        $rootScope.$user = _this.user;
+        return $rootScope.$loadings = {
+          hasAny: function() {
+            var key;
+            for (key in this) {
+              if (key !== 'hasAny') {
+                return true;
+              }
+            }
+            return false;
+          }
+        };
       };
     })(this);
     this.user = (_ref = window.user) != null ? _ref : {};
@@ -590,9 +602,19 @@
         return $rootScope.$confirmModal.isShow = true;
       }
     };
+    this.httpId = 0;
     this.http = (function(_this) {
       return function(args) {
-        return $http(args).error(function() {
+        var httpId;
+        httpId = _this.httpId++;
+        $rootScope.$loadings[httpId] = {
+          method: args.method,
+          url: args.url
+        };
+        return $http(args).success(function() {
+          return delete $rootScope.$loadings[httpId];
+        }).error(function() {
+          delete $rootScope.$loadings[httpId];
           $.av.pop({
             title: 'Server Error',
             message: 'Please try again or refresh this page.',
