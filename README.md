@@ -93,7 +93,7 @@ origin_handler = app.handle_uncaught_exception
 def exception_handler(request, resolver, exc_info):
     api_url = 'https://{your_host}/api/applications/{your_app_key}/logs'
     exc_type, exc_value, exc_traceback = exc_info
-    v = Victorique(api_url, str(request.user))
+    v = Victorique(api_url, unicode(request.user) if hasattr(request, 'user') else '')
     v.send('exception: %s' % str(exc_value), {
         'method': request.method,
         'path': request.get_host() + request.get_full_path(),
@@ -125,6 +125,10 @@ ALLOW_REGISTER = False # `False` will not allow register
 
 **upload victorique**
 >https://developers.google.com/appengine/docs/python/gettingstartedpython27/uploading
+```bash
+$ appcfg.py update .
+$ appcfg.py backends update .
+```
 
 
 
